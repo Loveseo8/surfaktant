@@ -61,8 +61,8 @@
     $("yearStatLabel").textContent=`${plural(yearCount,["год","года","лет"])} научных данных`;
     $("categoryStat").textContent=categoryCount;
     $("categoryStatLabel").textContent=`терапевтическ${plural(categoryCount,["ое направление","их направления","их направлений"])}`;
-    $("publicationStat").textContent=data.length;
-    $("publicationStatLabel").textContent=plural(data.length,["материал","материала","материалов"]);
+    $("publicationStat").textContent="50+";
+    $("publicationStatLabel").textContent="публикаций";
   }
   function init(){
     updateStats();
@@ -80,14 +80,14 @@
   }
   function render(){
     const items=filtered(),shown=items.slice(0,state.limit);$("cards").innerHTML=shown.map(card).join("");$("emptyState").hidden=items.length>0;$("showMore").hidden=shown.length>=items.length;
-    const active=[state.category,state.nosology,state.year,state.author,state.message].filter(Boolean).length;$("filterBadge").hidden=!active;$("filterBadge").textContent=active;document.querySelectorAll(".category-chips button").forEach(b=>b.classList.toggle("active",b.dataset.value===state.category));
+    const active=[state.category,state.nosology,state.year,state.author,state.message].filter(Boolean).length;$("filterBadge").hidden=!active;$("filterBadge").textContent=active;document.querySelectorAll(".category-chips button").forEach(b=>{const key=b.dataset.filter||"category";const isAll=!b.dataset.value;const selected=isAll?!state.category&&!state.nosology:b.dataset.value===state[key];b.classList.toggle("active",selected);});
     document.querySelectorAll(".open-details").forEach(b=>b.addEventListener("click",()=>openDetails(Number(b.dataset.id))));
     document.querySelectorAll(".share-publication").forEach(b=>b.addEventListener("click",()=>sharePublication(Number(b.dataset.id),b)));
     document.querySelectorAll(".share-pdf").forEach(b=>b.addEventListener("click",()=>sharePdfPublication(Number(b.dataset.id),b)));
     document.querySelectorAll(".download-publication").forEach(b=>b.addEventListener("click",()=>downloadPublication(Number(b.dataset.id),b)));
   }
   function card(x){const href=safeUrl(x.url);const url=href?`<a href="${esc(href)}" target="_blank" rel="noopener">Источник ↗</a>`:"";const download=downloads[x.id]?`<button class="download-publication" data-id="${x.id}">Скачать PDF ↓</button><button class="share-pdf" data-id="${x.id}">↗ Поделиться PDF</button>`:"";return `<article class="publication-card"><div class="card-top"><span class="card-year">${esc(x.year||"Год не указан")}</span><span class="card-type">${esc(x.workType||"Научный материал")}</span></div><h3>${esc(x.title)}</h3><p class="journal">${esc(x.journal)}</p>${x.authors?`<p class="card-authors"><span>Авторы:</span> ${esc(x.authors)}</p>`:""}<button class="open-details card-details" data-id="${x.id}">Подробнее</button><p class="card-summary">${esc(cleanSummary(x))}</p><div class="card-meta">${x.nosology?`<span>${esc(x.nosology)}</span>`:""}${x.patients?`<span>${esc(x.patients)}</span>`:""}</div><div class="card-actions">${url}${download}<button class="share-publication" data-id="${x.id}">↗ Поделиться источником</button></div></article>`}
-  function renderChips(){const cats=unique("category").filter(category=>!isHiddenCategory(category));$("categoryChips").innerHTML=`<button class="active" data-value="">Все</button>`+cats.map(c=>`<button data-value="${esc(c)}">${esc(shortCategory(c))}</button>`).join("");$("categoryChips").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;state.category=b.dataset.value;$("categoryFilter").value=state.category;state.limit=12;render();});}
+  function renderChips(){const cats=unique("category").filter(category=>!isHiddenCategory(category));$("categoryChips").innerHTML=`<button class="active" data-filter="category" data-value="">Все</button><button data-filter="nosology" data-value="БЛД">БЛД</button>`+cats.map(c=>`<button data-filter="category" data-value="${esc(c)}">${esc(shortCategory(c))}</button>`).join("");$("categoryChips").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const key=b.dataset.filter||"category";if(key==="nosology"){state.category="";state.nosology=b.dataset.value;$("categoryFilter").value="";$("nosologyFilter").value=state.nosology;}else{state.category=b.dataset.value;state.nosology="";$("categoryFilter").value=state.category;$("nosologyFilter").value="";}state.limit=12;render();});}
   function detailBlock(title,text,wide=false){const cleaned=cleanLongText(text);return cleaned?`<section class="detail-block${wide?" wide":""}"><h3>${title}</h3><p>${esc(cleaned)}</p></section>`:"";}
   function publicationUrl(id){const url=new URL(location.href);url.search="";url.hash=`publication-${id}`;return url.href;}
   async function sharePublication(id,button){const x=data.find(item=>item.id===id);if(!x)return;const sourceUrl=safeUrl(x.url)||publicationUrl(id);const payload={title:x.title,text:`${x.title} — ${x.journal || "Библиотека данных Сурфактант-БЛ"}`,url:sourceUrl};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);const old=button.textContent;button.textContent="Ссылка скопирована ✓";setTimeout(()=>button.textContent=old,2200);}catch(error){if(error && error.name!=="AbortError")button.textContent="Не удалось";}}
