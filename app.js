@@ -39,7 +39,19 @@
   const pdfUrl = id => downloads[id] ? new URL(`assets/pdfs/${String(downloads[id]).replace(/^\//,"")}`, document.baseURI).href : "";
 
   function populateSelect(id,key){ unique(key).filter(v=>key!=="category"||!isHiddenCategory(v)).forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=key==="category"?shortCategory(v):v;$(id).append(o);}); }
+  function updateStats(){
+    const years=data.map(item=>Number(item.year)).filter(Number.isFinite);
+    const yearCount=years.length?Math.max(...years)-Math.min(...years)+1:0;
+    const categoryCount=new Set(data.map(item=>item.category).filter(Boolean)).size;
+    $("yearStat").textContent=yearCount;
+    $("yearStatLabel").textContent=`${plural(yearCount,["год","года","лет"])} научных данных`;
+    $("categoryStat").textContent=categoryCount;
+    $("categoryStatLabel").textContent=`терапевтическ${plural(categoryCount,["ое направление","их направления","их направлений"])}`;
+    $("publicationStat").textContent=data.length;
+    $("publicationStatLabel").textContent=plural(data.length,["материал","материала","материалов"]);
+  }
   function init(){
+    updateStats();
     populateSelect("categoryFilter","category");populateSelect("nosologyFilter","nosology");populateSelect("yearFilter","year");
     addOptions("authorFilter",authorValues());
     addOptions("messageFilter",messageValues(),value=>value.length>90?`${value.slice(0,87)}…`:value);
