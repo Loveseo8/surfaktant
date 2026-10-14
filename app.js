@@ -16,6 +16,20 @@
     .replace(/\s+/g, " ")
     .trim();
   const keyMessage = item => String(item.keyMessages || "").replace(/^\s*КЛЮЧЕВАЯ\s*:\s*/i, "").trim();
+  const keywordAliases = new Map([
+    ["снижение агрессивных параметтров ивл","Снижение агрессивных параметров ИВЛ"],
+    ["снижение потребности в респираторной поддержке","Снижение потребности в респираторной поддержке"],
+    ["сокращения сроков пребывания в отделении","Сокращение сроков пребывания в отделении"],
+    ["улучшению механических свойств легких","Улучшение механических свойств лёгких"],
+    ["«поздняя» сурфактант-терапии","Поздняя сурфактант-терапия"],
+    ["сурфактант (обзор)","Сурфактант: обзор"],
+    ["ковид-индуцированное интерстициальное заболевание легких","Ковид-индуцированное интерстициальное заболевание лёгких"]
+  ]);
+  const normalizeKeyword = value => {
+    const cleaned=String(value||"").replace(/\s+/g," ").replace(/\(\s+/g,"(").replace(/\s+\)/g,")").trim();
+    return keywordAliases.get(normal(cleaned))||cleaned;
+  };
+  const itemKeywords = item => String(keyMessage(item)||"").split(/[,;]+/).map(normalizeKeyword).filter(Boolean);
   const normalizeAuthor = value => String(value || "")
     .replace(/\s+и\s+(?:др\.?|соавт\.?)\s*$/i, "")
     .replace(/\s+/g, " ")
@@ -23,10 +37,10 @@
     .trim();
   const itemAuthors = item => String(item.authors || "").split(/[,;\n]+/).map(normalizeAuthor).filter(value => value && /[A-Za-zА-Яа-яЁё]/.test(value));
   const authorValues = () => [...new Set(data.flatMap(itemAuthors))].sort((a,b)=>a.localeCompare(b,"ru"));
-  const messageValues = () => uniqueNormalized(data.flatMap(item=>String(keyMessage(item) || "").split(/[,;]+/))).sort((a,b)=>a.localeCompare(b,"ru"));
+  const messageValues = () => uniqueNormalized(data.flatMap(itemKeywords)).sort((a,b)=>a.localeCompare(b,"ru"));
   const searchSuggestionValues = () => uniqueNormalized(data.flatMap(item=>[
-    item.nosology,
-    ...String(keyMessage(item) || "").split(/[,;]+/)
+    normalizeKeyword(item.nosology),
+    ...itemKeywords(item)
   ])).filter(value=>value.length>=2).sort((a,b)=>a.localeCompare(b,"ru"));
   const addOptions = (id, values, label = value => value) => values.forEach(value=>{const option=document.createElement("option");option.value=value;option.textContent=label(value);$(id).append(option);});
   const keyMessageHtml = item => {
@@ -61,7 +75,7 @@
   function filtered(){
     const q=normal(state.search);
     const fields=["title","authors","journal","category","nosology","workType","design","abstract","conclusions","keyMessages","audience","citation"];
-    const items=data.filter(x=>(!q||fields.some(k=>normal(x[k]).includes(q)))&&(!state.category||x.category===state.category)&&(!state.nosology||x.nosology===state.nosology)&&(!state.year||String(x.year)===state.year)&&(!state.author||itemAuthors(x).some(author=>normal(author)===normal(state.author)))&&(!state.message||normal(keyMessage(x)).includes(normal(state.message))));
+    const items=data.filter(x=>(!q||fields.some(k=>normal(x[k]).includes(q)))&&(!state.category||x.category===state.category)&&(!state.nosology||x.nosology===state.nosology)&&(!state.year||String(x.year)===state.year)&&(!state.author||itemAuthors(x).some(author=>normal(author)===normal(state.author)))&&(!state.message||itemKeywords(x).some(keyword=>normal(keyword)===normal(state.message))));
     return items.sort((a,b)=>state.sort==="title"?a.title.localeCompare(b.title,"ru"):state.sort==="old"?(Number(a.year)||0)-(Number(b.year)||0):(Number(b.year)||0)-(Number(a.year)||0));
   }
   function render(){
